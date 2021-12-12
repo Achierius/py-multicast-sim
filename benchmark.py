@@ -80,6 +80,9 @@ parser.add_argument('-w', '--workload',
         default='fruits_of_my_labor', metavar='WORKLOAD',
         dest='workload', action='store')
 
+parser.add_argument('--disable_sharding',
+        dest='sharding', action='store_false')
+
 parser.add_argument('--show_tree', action='store_true')
 parser.add_argument('--show_tasks', action='store_true')
 
@@ -88,6 +91,7 @@ args = parser.parse_args()
 setBenchOpts(args, args.metrics)
 
 bench(workloads[args.workload](), args.n_routers, args.n_workers, args.max_children,
-        args.max_children_root if args.max_children_root else args.max_children)
+        args.max_children_root if args.max_children_root else args.max_children,
+        args.sharding)
 
 #run_targets[args.run_target](lambda: None, workloads[args.workload]())

@@ -25,7 +25,9 @@ def setBenchOpts(flags, opts):
     bench_opts = opts
 
 
-def bench(workload, n_routers, n_workers, max_children, max_children_root):
+def bench(workload, n_routers, n_workers,
+        max_children, max_children_root,
+        sharding):
     netReset()
 
     #max_children = 4
@@ -37,14 +39,16 @@ def bench(workload, n_routers, n_workers, max_children, max_children_root):
     serv_root = serv_coord
 
     coord = Coordinator(serv_coord, serv_root.ip, "coord")
-    root = Router(serv_root, serv_coord.ip, True, max_children_root, "root")
+    root = Router(serv_root, serv_coord.ip, True, max_children_root,
+            "root", sharding)
 
     tasks = []
     task_ids = []
 
     for i in range(n_routers):
         server = NetworkHost("80.0")
-        router = Router(server, serv_coord.ip, False, max_children, "r_" + str(i))
+        router = Router(server, serv_coord.ip, False, max_children,
+                "r_" + str(i), sharding)
     for i in range(n_workers):
         server = NetworkHost("90.0")
         worker = Worker(server, serv_coord.ip, "w_" + str(i))
@@ -65,6 +69,7 @@ def bench(workload, n_routers, n_workers, max_children, max_children_root):
     if bench_flags.show_tree:
         print("======== Mcast Tree ========")
         print(coord.root.prettyString())
+        
 
     if bench_flags.show_tasks:
         print("======= Task Results =======")

@@ -16,6 +16,7 @@ class Router(Node):
         self.parent = None
         self.child_workers = []
         self.child_routers = []
+        self.enable_sharding = enable_sharding
 
         self.child_task_counts = {} # Lets us load-balance new tasks
         self.child_task_keys = {} # Idealized (downwards) key-based sharding
@@ -84,13 +85,19 @@ class Router(Node):
             # In C++ ofc we're doing this with Bloom Filters but this still
             # gives us a pretty chill lower bound on congestion
             k = msg['key']
-            for child, child_dict in self.child_task_keys.items():
-                if k and k in child_dict and child_dict[k] > 0:
-                    if child in self.child_routers:
-                        propogateMulticast(child, True)
-                    else:
-                        assert child in self.child_workers, "neither router nor child?"
-                        propogateMulticast(child, False)
+            if self.enable_sharding:
+                for child, child_dict in self.child_task_keys.items():
+                    if k and k in child_dict and child_dict[k] > 0:
+                        if child in self.child_routers:
+                            propogateMulticast(child, True)
+                        else:
+                            assert child in self.child_workers, "neither router nor child?"
+                            propogateMulticast(child, False)
+            else:
+                for child in self.child_workers:
+                    propogateMulticast(child, False)
+                for child in self.child_routers:
+                    propogateMulticast(child, True)
             return
         else:
             assert not msg, f"bad msg contents: {msg}"
@@ -119,7 +126,6 @@ class Router(Node):
         self.host.forwardPacket(p, p.dst_port, lucky_child,
                 ROUTER_RECV_USERTASK_PORT if lucky_child in self.child_routers else
                 WORKER_RECV_USERTASK_PORT)
-
 
 
     def handleResultMsg(self, p: Packet):

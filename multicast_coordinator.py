@@ -32,12 +32,13 @@ class UserTask:
             return f"<UserTask □ #{self.id}: {self.program}>"
 
 
-class Tree:
+class Tree(Node):
     def __init__(self, ip: IpAddr, is_router: bool, max_children: int = 0):
         self.children = []
         self.ip = ip
         self.max_children = max_children
         self.is_router = is_router
+
 
     def prettyString(self, indent = 0) -> str:
         tab = '  '
@@ -100,7 +101,9 @@ class Coordinator(Node):
                     return None
                 if tree.hasRoom():
                     return tree
-                for child in tree.children:
+                sorted_children = sorted(tree.children,
+                        key=lambda c: len(c.children))
+                for child in sorted_children:
                     candidate = findRoom(child)
                     if candidate:
                         return candidate
