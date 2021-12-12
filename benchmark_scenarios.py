@@ -25,6 +25,57 @@ def setBenchOpts(flags, opts):
     bench_opts = opts
 
 
+def bench(workload, n_routers, n_workers, max_children, max_children_root):
+    netReset()
+
+    #max_children = 4
+    #max_children_root = 2
+    #n_routers = 9
+    #n_workers = 27
+
+    serv_coord = NetworkHost("73.0.0.1")
+    serv_root = serv_coord
+
+    coord = Coordinator(serv_coord, serv_root.ip, "coord")
+    root = Router(serv_root, serv_coord.ip, True, max_children_root, "root")
+
+    tasks = []
+    task_ids = []
+
+    for i in range(n_routers):
+        server = NetworkHost("80.0")
+        router = Router(server, serv_coord.ip, False, max_children, "r_" + str(i))
+    for i in range(n_workers):
+        server = NetworkHost("90.0")
+        worker = Worker(server, serv_coord.ip, "w_" + str(i))
+
+    for task in workload:
+        tasks.append(task)
+        coord.enqueueUserTask(task)
+#        #sleep(0.1)
+
+    coord.joinUserTasks()
+
+    ip_map, packets, failures = getNetworkDebugInfo()
+    #print("======== Debug Info ========")
+    #pprint(ip_map)
+    #pprint(packets)
+    #pprint(failures)
+
+    if bench_flags.show_tree:
+        print("======== Mcast Tree ========")
+        print(coord.root.prettyString())
+
+    if bench_flags.show_tasks:
+        print("======= Task Results =======")
+        for task in tasks:
+            print(task)
+
+    if bench_opts:
+        for b in bench_opts:
+            benchmark_stats[b](serv_coord.ip, serv_root.ip, ip_map, packets, failures)
+
+
 def benchmark(func):
     """Performs setup / teardown & prints outputs."""
     @functools.wraps(func)
@@ -170,7 +221,7 @@ def bench_nRootPackets(coord_ip, root_ip, ip_map, packet_list, failure_info):
 
 benchmark_stats = {
           'n_packets': bench_nPackets
-        , 'n_root_packets': bench_nRootPackets
+        , 'n_packets_root': bench_nRootPackets
         }
 
 # POST SCRIPTUM: I deeply regret moving this to another file, I'll fix it tmrw
