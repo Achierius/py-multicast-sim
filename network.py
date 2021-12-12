@@ -125,7 +125,21 @@ _logged_failures = []
 
 
 def getNetworkDebugInfo():
+    """ Returns some useful stats and logs for debugging. """
     return (_ip_map, _logged_packets, _logged_failures)
+
+
+def netReset():
+    """ Resets the network state to its base (empty) configuration. """
+    global _ip_map
+    global _reserved_ips
+    global _logged_packets
+    global _logged_failures
+
+    _ip_map = {}
+    _reserved_ips = [loopback_ip]
+    _logged_packets = []
+    _logged_failures = []
 
 
 def _calcNetworkDistance(src: IpAddr, dst: IpAddr):

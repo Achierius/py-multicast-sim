@@ -1,9 +1,34 @@
 from network import Packet, NetworkHost, simpleSockListener, IpAddr, loopback_ip
-from enclave import EnclaveProgram, enclaveExecute
 from queue import Queue, SimpleQueue
 from time import sleep
 from threading import Thread
+from enclave import EnclaveProgram, enclaveExecute
 from multicast_core import *
+
+
+class UserTask:
+    def __init__(self, program: EnclaveProgram, task_id: int):
+        self.id = task_id
+
+        self.program = program
+        self.result = None
+        self.has_result = False # Non-pythonic I know
+
+
+    def finish(self, result: int):
+        self.has_result = True
+        self.result = result
+
+
+    def __repr__(self):
+        return self.__str__()
+
+
+    def __str__(self):
+        if self.has_result:
+            return f"<UserTask ▣ #{self.id}: {self.result}>"
+        else:
+            return f"<UserTask □ #{self.id}: {self.program}>"
 
 
 class Tree:
@@ -50,8 +75,9 @@ class Coordinator(Node):
                 COORD_CONTROL_PORT)
         assert host.openPort(simpleSockListener(host, self.handleResultMsg),
                 COORD_RECV_RESULT_PORT)
-        assert host.openPort(simpleSockListener(host, self.handleUserTask),
-                COORD_RECV_USERTASK_PORT)
+
+        self.task_queue = Queue() # Queue for tasks to send to mcast tree
+        self.tasks = {} # Used to store results of previously completed tasks
 
         self.routers = []
         self.workers = []
@@ -112,29 +138,30 @@ class Coordinator(Node):
             assert not msg, f"bad msg contents: {msg}"
 
 
+    # TODO add UIDs to avoid people reporting for the wrong task
     def handleResultMsg(self, p: Packet):
         msg = p.payload
         assert msg['type'] == 'Result', f"bad Result msg type: {msg}"
+        self.tasks[msg['program_uid']].finish(msg['result'])
+        self.task_queue.task_done()
         # TODO pass message along to user
 
 
-    def handleUserTask(self, p: Packet):
-        msg = p.payload
-        assert self.root, "Root node has not joined yet"
-        assert msg['type'] == 'ExecFakeProgram', f"Bad packet: {p}"
-        assert msg['program'], "Missing program!"
+    def enqueueUserTask(self, task: UserTask):
+        self.tasks[task.id] = task
+        self.task_queue.put(task)
 
-        packet = Packet(p.payload, p.dst, p.dst_port,
-                self.root_ip, ROUTER_RECV_USERTASK_PORT)
-        self.host.sendPacket(packet)
-        assert self.host.sendPacket(packet), f"Packet failed to send: {packet}"
-
-
-    def execUserTask(self, program: EnclaveProgram):
+        # TODO defer this to later
+        user_task = self.task_queue.get()
         msg = {
               'type': 'ExecFakeProgram'
-            , 'program': program
+            , 'program': user_task.program
+            , 'program_uid': user_task.id
             }
         packet = Packet(msg, self.host.ip, COORD_SEND_USERTASK_PORT,
                 self.root_ip, ROUTER_RECV_USERTASK_PORT)
         assert self.host.sendPacket(packet), f"Packet failed to send: {packet}"
+
+
+    def joinUserTasks(self):
+        self.task_queue.join()

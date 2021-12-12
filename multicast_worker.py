@@ -51,22 +51,22 @@ class Worker(Node):
     def handleUserTask(self, p: Packet):
         msg = p.payload
         assert msg['type'] == "ExecFakeProgram", f"Bad packet: {p}"
-        self.execute(msg['program'])
+        program = msg['program']
 
-
-    def execute(self, program: EnclaveProgram):
         assert self.parent, "Detached worker cannot run!"
         if self._enclave_thread is None:
-            self._enclaveStart(program)
+            self._enclaveStart(program, msg['program_uid'])
         else:
-            self._enclave_queue.put(program)
+            self._enclave_queue.put( (program, msg['program_uid']) )
 
 
-    def _enclaveStart(self, program: EnclaveProgram):
+    def _enclaveStart(self, program: EnclaveProgram, program_uid: int):
         assert self._enclave_thread is None, "Enclave already running"
+        def callback(result):
+            return self._enclaveComplete(program_uid, result)
         self._enclave_thread = Thread(
                 target = enclaveExecute,
-                args = (program, self._enclaveUpdate, self._enclaveComplete))
+                args = (program, self._enclaveUpdate, callback))
         self._enclave_thread.start()
 
 
@@ -76,25 +76,25 @@ class Worker(Node):
                   'type': "KeyUpdate"
                 , 'key': key
                 , 'value': value
-                , 'program_id': program.program_id
                 }
         self.host.sendMsg(mcast_msg, WORKER_MCAST_PORT, self.parent, ROUTER_MCAST_PORT)
 
 
-    def _enclaveComplete(self, prog_id, result):
+    def _enclaveComplete(self, program_uid: int, result):
         # Currently runs synchronously so no need to join
         #self._enclave_thread.join()
 
         result_msg = {
                   'type': "Result"
-                , 'id': prog_id
                 , 'result': result
+                , 'program_uid': program_uid
                 }
         self.host.sendMsg(result_msg, WORKER_SEND_RESULT_PORT,
                           self.parent, ROUTER_RESULT_PORT)
 
         if not self._enclave_queue.empty():
             self._enclave_thread = None
-            self._enclaveStart(self._enclave_queue.get())
+            task, t_id = self._enclave_queue.get()
+            self._enclaveStart(task, t_id)
         else:
             self._enclave_thread = None

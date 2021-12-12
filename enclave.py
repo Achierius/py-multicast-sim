@@ -5,10 +5,7 @@ from time import sleep
 
 class EnclaveProgram:
 
-    _next_program_id = 0
-
-    def __init__(self, keyspace,
-            length_factor: float, work_factor: float):
+    def __init__(self, keyspace, length_factor: float, work_factor: float):
         """
         Higher LENGTH_FACTOR => longer program sequences (range: 0-1)
         WORK_FACTOR => expected number of milliseconds spent executing each key
@@ -16,9 +13,6 @@ class EnclaveProgram:
         self.keyspace = keyspace
         self.work_factor = work_factor
         self.keys = []
-        self.program_id = self._next_program_id
-
-        self._next_program_id += 1
 
         rng = rand.default_rng()
         n_keys = 1 + rng.geometric(p = (1 - length_factor))
@@ -32,7 +26,7 @@ class EnclaveProgram:
 
 
     def __str__(self):
-        return f"<EnclaveProgram #{self.program_id}: {self.keys}>"
+        return f"<Program: {self.keys}>"
 
 
 def enclaveExecute(program: EnclaveProgram, key_update_fn, callback_fn):
@@ -62,4 +56,4 @@ def enclaveExecute(program: EnclaveProgram, key_update_fn, callback_fn):
         result += new_value
         key_update_fn(key, prev_value, program)
         prev_value = new_value
-    callback_fn(program.program_id, result)
+    callback_fn(result)

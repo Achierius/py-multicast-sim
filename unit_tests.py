@@ -88,6 +88,11 @@ class TestNetworkSimulator(unittest.TestCase):
 class TestMulticastTreeStructure(unittest.TestCase):
 
     def test_setup(self):
+        """
+        Just making sure that nothing faults during setup.
+        """
+        netReset()
+
         serv_coord = NetworkHost()
         serv_root = serv_coord
 
@@ -99,18 +104,20 @@ class TestMulticastTreeStructure(unittest.TestCase):
             router = Router(server, serv_coord.ip, False, 3, "r_" + str(i))
             worker = Worker(server, serv_coord.ip, "w_" + str(i))
 
-        #ip_map, logged_packets = getNetworkDebugInfo()
-        #pprint(ip_map)
-        #pprint(logged_packets)
-        #print(coord.root.prettyString())
+    def test_program_determinism(self):
+        """
+        Multiple user-tasks based on the same program should have the same
+        result, since they don't depend on the actual values in the memcache.
+        """
+        netReset()
 
-
-    def test_simple_driver(self):
         serv_coord = NetworkHost("73.222.255.1")
         serv_root = serv_coord
 
         coord = Coordinator(serv_coord, serv_root.ip, "coord")
         root = Router(serv_root, serv_coord.ip, True, 3, "root")
+        tasks = []
+        task_ids = []
 
         for i in range(4):
             server = NetworkHost()
@@ -118,17 +125,62 @@ class TestMulticastTreeStructure(unittest.TestCase):
         for i in range(7):
             server = NetworkHost()
             worker = Worker(server, serv_coord.ip, "w_" + str(i))
-        for i in range(1):
-            program = EnclaveProgram(['x', 'y', 'z'], 0.3, 1)
-            coord.execUserTask(program)
 
-        sleep(5)
+        program = EnclaveProgram(['x', 'y', 'z'], 0.3, 1)
+        for i in range(7):
+            task = UserTask(program, i)
 
+            tasks.append(task)
+            coord.enqueueUserTask(task)
+
+        coord.joinUserTasks()
+
+        prev_value = tasks[0].result
+        for task in tasks:
+            self.assertEqual(task.result, prev_value)
+            prev_value = task.result
+
+    def test_simple_driver(self):
+        """ Debugging rig. """
+        netReset()
+
+        serv_coord = NetworkHost("73.222.255.1")
+        serv_root = serv_coord
+
+        coord = Coordinator(serv_coord, serv_root.ip, "coord")
+        root = Router(serv_root, serv_coord.ip, True, 3, "root")
+        tasks = []
+        task_ids = []
+
+        for i in range(4):
+            server = NetworkHost()
+            router = Router(server, serv_coord.ip, False, 2, "r_" + str(i))
+        for i in range(7):
+            server = NetworkHost()
+            worker = Worker(server, serv_coord.ip, "w_" + str(i))
+
+        program = EnclaveProgram(['x', 'y', 'z'], 0.3, 1)
+        for i in range(7):
+            task = UserTask(program, i)
+
+            tasks.append(task)
+            coord.enqueueUserTask(task)
+
+        coord.joinUserTasks()
+
+        print("======== Debug Info ========")
         ip_map, packets, failures = getNetworkDebugInfo()
         pprint(ip_map)
         pprint(packets)
         pprint(failures)
+
+        print("======= Task Results =======")
+        for task in tasks:
+            print(task)
+
+        print("======== Mcast Tree ========")
         print(coord.root.prettyString())
+
 
 if __name__ == '__main__':
     unittest.main()
