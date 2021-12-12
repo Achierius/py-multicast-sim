@@ -8,7 +8,7 @@ from multicast_core import *
 class Router(Node):
 
     def __init__(self, host: NetworkHost, coordinator_ip: IpAddr, is_root: bool,
-            max_children: int, debug_name: str = ""):
+            max_children: int, debug_name: str, enable_sharding: bool = True):
         super().__init__(host, coordinator_ip, f"Router \'{debug_name}\'")
 
         self.is_root = is_root

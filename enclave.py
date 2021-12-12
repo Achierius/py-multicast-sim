@@ -51,7 +51,7 @@ def enclaveExecute(program: EnclaveProgram, key_update_fn, callback_fn):
     for key in program.keys:
         sleep(base_sleep*sleep_rng.exponential(1/program.work_factor))
         new_value = value_rng.integers(-65536, 65536) # not inclusive
-        new_value = ord(key)
+        new_value = hash(key)
         result //= 2
         result += new_value
         key_update_fn(key, prev_value, program)

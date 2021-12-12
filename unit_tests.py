@@ -144,7 +144,12 @@ class TestMulticastTreeStructure(unittest.TestCase):
         """ Debugging rig. """
         netReset()
 
-        serv_coord = NetworkHost("73.222.255.1")
+        # IP space:
+        #  Driver, Coordinator, and Root Router are on 73.0.0.1
+        #  Routers are on 80.0.*.*
+        #  Workers are on 90.0.*.*
+
+        serv_coord = NetworkHost("73.0.0.1")
         serv_root = serv_coord
 
         coord = Coordinator(serv_coord, serv_root.ip, "coord")
@@ -153,10 +158,10 @@ class TestMulticastTreeStructure(unittest.TestCase):
         task_ids = []
 
         for i in range(4):
-            server = NetworkHost()
+            server = NetworkHost("80.0")
             router = Router(server, serv_coord.ip, False, 2, "r_" + str(i))
         for i in range(7):
-            server = NetworkHost()
+            server = NetworkHost("90.0")
             worker = Worker(server, serv_coord.ip, "w_" + str(i))
 
         program = EnclaveProgram(['x', 'y', 'z'], 0.3, 1)

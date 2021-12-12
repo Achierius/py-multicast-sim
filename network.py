@@ -175,22 +175,47 @@ def _registerHost(host: NetworkHost, ip: IpAddr = None) -> IpAddr:
     Attempts to add host to the internet mapping with the specified address, if
     one is given; if IP is None, instead assigns the first available address in
     the local subnet 192.168.X.X.
+    An address truncated after one or more octets (e.g. 172.1) will used as the
+    prefix of the address space in which to generate the new IP.
     Returns the address if successful, otherwise returns None.
     """
-    addr = ip
+
     if ip is None:
-        for c in range(1, 256): # Giga lazy brute force
-            for d in range(1, 256):
-                addr = "192.168." + str(c) + "." + str(d)
-                if addr not in _ip_map:
-                    _ip_map[addr] = host
-                    return addr
-        return None
-    elif (ip in _ip_map) or (ip in _reserved_ips):
+        ip = "192.168"
+        #for c in range(1, 256): # Giga lazy brute force
+        #    for d in range(1, 256):
+        #        ip = "192.168." + str(c) + "." + str(d)
+        #        if ip not in _ip_map:
+        #            _ip_map[ip] = host
+        #            return ip
+        #return None
+    if (ip in _ip_map) or (ip in _reserved_ips):
         return None
     else:
-        _ip_map[ip] = host
-        return ip
+        addr = ""
+        octets = ip.split('.')
+        # Look it was late, I know how to do this in Haskell
+        if len(octets) == 4:
+            addr = ip
+        elif len(octets) == 3:
+            for d in range(0, 256):
+                new_ip = ip + "." + str(d)
+                if new_ip not in _ip_map:
+                    addr = new_ip
+                    break
+        elif len(octets) == 2:
+            for c in range(0, 256): # Giga lazy brute force
+                for d in range(0, 256):
+                    new_ip = ip + "." + str(c) + "." + str(d)
+                    if new_ip not in _ip_map:
+                        addr = new_ip
+                        break
+                if addr != "":
+                    break
+        else:
+            assert False, "I'll redo this whole thing later"
+        _ip_map[addr] = host
+        return addr
 
 
 def _route(src: IpAddr, dst: IpAddr) -> NetworkHost:

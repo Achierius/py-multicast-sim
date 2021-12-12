@@ -1,6 +1,7 @@
 from network import Packet, NetworkHost, simpleSockListener, IpAddr, loopback_ip
 from queue import Queue, SimpleQueue
 from time import sleep
+from termcolor import colored
 from threading import Thread
 from enclave import EnclaveProgram, enclaveExecute
 from multicast_core import *
@@ -40,7 +41,7 @@ class Tree:
 
     def prettyString(self, indent = 0) -> str:
         tab = '  '
-        car = ' 𝕽 ' if self.is_router else ' 労'
+        car = colored(' 𝕽 ', 'red') if self.is_router else colored(' 労', 'yellow')
         cdr = ""
         for child in self.children:
             cdr += f"\n{child.prettyString(indent + 1)}"
