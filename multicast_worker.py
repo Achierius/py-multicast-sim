@@ -63,7 +63,7 @@ class Worker(Node):
     def _enclaveStart(self, program: EnclaveProgram, program_uid: int):
         assert self._enclave_thread is None, "Enclave already running"
         def callback(result):
-            return self._enclaveComplete(program_uid, result)
+            return self._enclaveComplete(program, program_uid, result)
         self._enclave_thread = Thread(
                 target = enclaveExecute,
                 args = (program, self._enclaveUpdate, callback))
@@ -80,13 +80,14 @@ class Worker(Node):
         self.host.sendMsg(mcast_msg, WORKER_MCAST_PORT, self.parent, ROUTER_MCAST_PORT)
 
 
-    def _enclaveComplete(self, program_uid: int, result):
+    def _enclaveComplete(self, program: EnclaveProgram, program_uid: int, result):
         # Currently runs synchronously so no need to join
         #self._enclave_thread.join()
 
         result_msg = {
                   'type': "Result"
                 , 'result': result
+                , 'program': program
                 , 'program_uid': program_uid
                 }
         self.host.sendMsg(result_msg, WORKER_SEND_RESULT_PORT,

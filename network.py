@@ -68,17 +68,36 @@ class NetworkHost:
         self.port_buffers.pop(port, None)
 
 
-    def sendPacket(self, packet : Packet) -> bool:
+    def sendPacket(self, packet: Packet) -> bool:
         """
         Tries to send packet from current host via the network.
         Returns false iff send fails (e.g. if recipient DNE) or
         if the packet's source IP does not match the current host.
         """
-        assert packet.src == self.ip, "Malformed packet src IP"
+        assert packet.src == self.ip, \
+                f"Mismatched dest. IP in packet {packet}:"\
+                f"{packet.src} vs. actual {self.ip}"
         return _sendPacket(packet)
 
+
+    def forwardPacket(self, packet: Packet, port: int,
+            dst: IpAddr, dst_port: int) -> bool:
+        """
+        Changes the source/destination of the given packet such that the packet
+        originates from this host at port PORT and is sent to DST:DST_PORT.
+        The destination of the packet must be equivalent to this host's IP.
+        Returns false if the packet is valid but cannot be send for another
+        reason.
+        """
+        assert packet.dst == self.ip, \
+                f"Mismatched dest. IP in forwarded packet {packet}:"\
+                f"{packet.dst} vs. actual {self.ip}"
+        new_packet = Packet(packet.payload, self.ip, port, dst, dst_port)
+        return self.sendPacket(new_packet)
+
+
     def sendMsg(self, msg, local_port: int,
-                dst: IpAddr, remote_port: int) -> bool:
+            dst: IpAddr, remote_port: int) -> bool:
         """
         Creates packet from given message, then attempts to
         send packet from current host via the network.
@@ -95,6 +114,9 @@ class NetworkHost:
         Otherwise returns False.
         Should NOT be called by programs 'running' on this host!
         """
+        assert p.dst == loopback_ip or p.dst == self.ip, \
+                f"Mismatched dest. IP in recieved packet {p}:"\
+                f"{p.dst} vs. actual {self.ip}"
         port = p.dst_port
         if port in self.local_ports:
             self.port_buffers[port] = p
