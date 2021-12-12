@@ -22,13 +22,13 @@ COORD_SEND_USERTASK_PORT = 3071
 COORD_RECV_RESULT_PORT = 3011
 COORD_CONTROL_PORT = 3010
 
+
 class Node:
     def __init__(self, host: NetworkHost, coordinator_ip: IpAddr,
                  debug_name: str):
         self.host = host
         self.coordinator_ip = coordinator_ip
         self.name = debug_name
-
 
     def __str__(self):
         return f"[{self.name}]"
@@ -40,17 +40,14 @@ class UserTask:
 
         self.program = program
         self.result = None
-        self.has_result = False # Non-pythonic I know
-
+        self.has_result = False  # Non-pythonic I know
 
     def finish(self, result: int):
         self.has_result = True
         self.result = result
 
-
     def __repr__(self):
         return self.__str__()
-
 
     def __str__(self):
         if self.has_result:

@@ -9,19 +9,19 @@ from multicast_router import *
 from multicast_worker import *
 from enclave import *
 
+
 class TestNetworkSimulator(unittest.TestCase):
 
     class PortListener:
 
-        def __init__(self, test_rig, debug_name, host, port, callback = None):
+        def __init__(self, test_rig, debug_name, host, port, callback=None):
             self.test_rig = test_rig
             self.name = debug_name
             self.host = host
             self.expects_packet = False
             self.callback = callback
             test_rig.assertTrue(host.openPort(self.notify, port),
-                    f"({self.name}) Failed to open port!")
-
+                                f"({self.name}) Failed to open port!")
 
         def setExpectation(self, p: Packet):
             self.expects_packet = True
@@ -30,23 +30,25 @@ class TestNetworkSimulator(unittest.TestCase):
             self.expected_sender = p.src
             # TODO refactor & cover the other fields in p
 
-
         def notify(self, port: int):
             self.test_rig.assertTrue(self.expects_packet,
-                    f"({self.name}) Unexpected packet!")
+                                     f"({self.name}) Unexpected packet!")
             self.expects_packet = False
             packet = self.host.port_buffers[port]
 
             self.test_rig.assertEqual(self.expected_port, packet.dst_port,
-                    f"({self.name}) Unexpected packet port!")
-            self.test_rig.assertEqual(self.expected_message, packet.payload,
-                    f"({self.name}) Unexpected packet contents!")
-            self.test_rig.assertEqual(self.expected_sender, packet.src,
-                    f"({self.name}) Unexpected packet source!")
+                                      f"({self.name}) Unexpected packet port!")
+            self.test_rig.assertEqual(
+                self.expected_message,
+                packet.payload,
+                f"({self.name}) Unexpected packet contents!")
+            self.test_rig.assertEqual(
+                self.expected_sender,
+                packet.src,
+                f"({self.name}) Unexpected packet source!")
 
             if self.callback:
                 self.callback(packet, self.host)
-
 
     def test_send_bounce(self):
         server_A = NetworkHost()
@@ -59,7 +61,8 @@ class TestNetworkSimulator(unittest.TestCase):
             host.sendPacket(new_packet)
 
         listener_A = self.PortListener(self, "A", server_A, 256)
-        listener_B = self.PortListener(self, "B", server_B, 49713, packetBouncer)
+        listener_B = self.PortListener(
+            self, "B", server_B, 49713, packetBouncer)
 
         listener_B.setExpectation(Packet("test packet to B",
                                          server_A.ip, 256,
@@ -71,17 +74,18 @@ class TestNetworkSimulator(unittest.TestCase):
         server_A.sendMsg("test packet to B", 256, server_B.ip, 49713)
 
         self.assertFalse(listener_B.expects_packet, "Packet not received")
-        self.assertFalse(listener_A.expects_packet, "Packet bounce not received")
-
+        self.assertFalse(
+            listener_A.expects_packet,
+            "Packet bounce not received")
 
     def test_loopback(self):
         server = NetworkHost()
         listener = self.PortListener(self, "0", server, 1001)
         listener.setExpectation(
-                Packet("test loopback", server.ip, 1001, server.ip, 1001))
+            Packet("test loopback", server.ip, 1001, server.ip, 1001))
         self.assertTrue(
-                server.sendMsg("test loopback", 1001, "127.0.0.1", 1001),
-                "Packet failed to send")
+            server.sendMsg("test loopback", 1001, "127.0.0.1", 1001),
+            "Packet failed to send")
         self.assertFalse(listener.expects_packet, "Packet not received")
 
 

@@ -3,11 +3,13 @@ from enclave import *
 
 ##### Workloads #####
 
+
 def posterboard(n):
     """ Yields tasks containing the same program back n times. """
     program = EnclaveProgram(['x', 'y', 'z'], 0.3, 1)
 
     iteration = 0
+
     def generator():
         nonlocal iteration
         while iteration < n:
@@ -22,6 +24,7 @@ def fruitsOfMyLabor(n):
     fruits = [(fruit,) for fruit in fruits]
 
     iteration = 0
+
     def generator():
         nonlocal iteration
         while iteration < n:

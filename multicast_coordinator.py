@@ -14,15 +14,17 @@ class Tree(Node):
         self.max_children = max_children
         self.is_router = is_router
 
-
-    def prettyString(self, indent = 0) -> str:
+    def prettyString(self, indent=0) -> str:
         tab = '  '
-        car = colored(' 𝕽 ', 'red') if self.is_router else colored(' 労', 'yellow')
+        car = colored(
+            ' 𝕽 ',
+            'red') if self.is_router else colored(
+            ' 労',
+            'yellow')
         cdr = ""
         for child in self.children:
             cdr += f"\n{child.prettyString(indent + 1)}"
         return f"{indent*tab}({car}{cdr})"
-
 
     def __str__(self):
         car = 'ℝ' if self.is_router else '𝕎'
@@ -49,27 +51,26 @@ class Coordinator(Node):
         super().__init__(host, host.ip, f"Coordinator \'{debug_name}\'")
 
         assert host.openPort(simpleSockListener(host, self.handleControlMsg),
-                COORD_CONTROL_PORT)
+                             COORD_CONTROL_PORT)
         assert host.openPort(simpleSockListener(host, self.handleResultMsg),
-                COORD_RECV_RESULT_PORT)
+                             COORD_RECV_RESULT_PORT)
 
-        self.task_queue = Queue() # Queue for tasks to send to mcast tree
-        self.tasks = {} # Used to store results of previously completed tasks
+        self.task_queue = Queue()  # Queue for tasks to send to mcast tree
+        self.tasks = {}  # Used to store results of previously completed tasks
 
         self.routers = []
         self.workers = []
 
         self.host = host
         self.root_ip = root_ip
-        self.root = None # Wait until they ping us to set things up
-
+        self.root = None  # Wait until they ping us to set things up
 
     def handleControlMsg(self, p: Packet):
         msg = p.payload
         if (msg['type'] == 'Join'):
 
             new_node = Tree(p.src, msg['is_router'],
-                    msg['max_children'] if msg['is_router'] else 0)
+                            msg['max_children'] if msg['is_router'] else 0)
 
             def findRoom(tree):
                 if not tree:
@@ -77,7 +78,7 @@ class Coordinator(Node):
                 if tree.hasRoom():
                     return tree
                 sorted_children = sorted(tree.children,
-                        key=lambda c: len(c.children))
+                                         key=lambda c: len(c.children))
                 for child in sorted_children:
                     candidate = findRoom(child)
                     if candidate:
@@ -89,20 +90,21 @@ class Coordinator(Node):
                 new_home.addChild(new_node)
 
                 msg_to_child = {
-                          'type': "AssignParent"
-                        , 'ip': new_home.ip
-                        }
+                    'type': "AssignParent", 'ip': new_home.ip
+                }
                 self.host.sendMsg(msg_to_child, COORD_CONTROL_PORT, p.src,
-                        ROUTER_CONTROL_PORT if msg['is_router'] else
-                        WORKER_CONTROL_PORT)
+                                  ROUTER_CONTROL_PORT if msg['is_router'] else
+                                  WORKER_CONTROL_PORT)
 
                 msg_to_parent = {
-                          'type': "AssignChild"
-                        , 'ip': p.src
-                        , 'node_type': "Router" if msg['is_router'] else "Worker"
-                        }
-                self.host.sendMsg(msg_to_parent, COORD_CONTROL_PORT, new_home.ip,
-                        ROUTER_CONTROL_PORT)
+                    'type': "AssignChild",
+                    'ip': p.src,
+                    'node_type': "Router" if msg['is_router'] else "Worker"}
+                self.host.sendMsg(
+                    msg_to_parent,
+                    COORD_CONTROL_PORT,
+                    new_home.ip,
+                    ROUTER_CONTROL_PORT)
             else:
                 # TODO reply with NACK
                 return
@@ -116,15 +118,14 @@ class Coordinator(Node):
         else:
             assert not msg, f"bad msg contents: {msg}"
 
-
     # TODO add UIDs to avoid people reporting for the wrong task
+
     def handleResultMsg(self, p: Packet):
         msg = p.payload
         assert msg['type'] == 'Result', f"bad Result msg type: {msg}"
         self.tasks[msg['program_uid']].finish(msg['result'])
         self.task_queue.task_done()
         # TODO pass message along to user
-
 
     def enqueueUserTask(self, task: UserTask):
         self.tasks[task.id] = task
@@ -133,14 +134,12 @@ class Coordinator(Node):
         # TODO defer this to later
         user_task = self.task_queue.get()
         msg = {
-              'type': 'ExecFakeProgram'
-            , 'program': user_task.program
-            , 'program_uid': user_task.id
-            }
+            'type': 'ExecFakeProgram',
+            'program': user_task.program,
+            'program_uid': user_task.id}
         packet = Packet(msg, self.host.ip, COORD_SEND_USERTASK_PORT,
-                self.root_ip, ROUTER_RECV_USERTASK_PORT)
+                        self.root_ip, ROUTER_RECV_USERTASK_PORT)
         assert self.host.sendPacket(packet), f"Packet failed to send: {packet}"
-
 
     def joinUserTasks(self):
         self.task_queue.join()

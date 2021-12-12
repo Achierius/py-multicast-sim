@@ -3,6 +3,7 @@ import numpy.random as rand
 import threading
 from time import sleep
 
+
 class EnclaveProgram:
 
     def __init__(self, keyspace, length_factor: float, work_factor: float):
@@ -15,15 +16,13 @@ class EnclaveProgram:
         self.keys = []
 
         rng = rand.default_rng()
-        n_keys = 1 + rng.geometric(p = (1 - length_factor))
+        n_keys = 1 + rng.geometric(p=(1 - length_factor))
         for _ in range(n_keys):
             next_key = self.keyspace[rng.integers(0, len(keyspace))]
             self.keys.append(next_key)
 
-
     def __repr__(self):
         return self.__str__()
-
 
     def __str__(self):
         return f"<Program: {self.keys}>"
@@ -42,15 +41,15 @@ def enclaveExecute(program: EnclaveProgram, key_update_fn, callback_fn):
     throughout the multicast tree.
     """
 
-    base_sleep = 0.01 # 1ms
+    base_sleep = 0.01  # 1ms
     sleep_rng = rand.default_rng()
     value_rng = rand.default_rng()
     result = 0
 
     prev_value = 0
     for key in program.keys:
-        sleep(base_sleep*sleep_rng.exponential(1/program.work_factor))
-        new_value = value_rng.integers(-65536, 65536) # not inclusive
+        sleep(base_sleep * sleep_rng.exponential(1 / program.work_factor))
+        new_value = value_rng.integers(-65536, 65536)  # not inclusive
         new_value = hash(key)
         result //= 2
         result += new_value
