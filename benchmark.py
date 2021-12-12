@@ -1,4 +1,3 @@
-import argparse
 from pprint import pprint
 from time import sleep
 from termcolor import colored
@@ -9,89 +8,94 @@ from multicast_core import *
 from multicast_coordinator import *
 from multicast_router import *
 from multicast_worker import *
-from enclave import *
 
 from benchmark_scenarios import *
+from workloads import *
+from user_args import *
 
 
-##### Workloads #####
+def bench(workload, n_routers, n_workers,
+        max_children, max_children_root,
+        sharding):
+    netReset()
 
-def posterboard(n):
-    """ Yields tasks containing the same program back n times. """
-    program = EnclaveProgram(['x', 'y', 'z'], 0.3, 1)
+    #max_children = 4
+    #max_children_root = 2
+    #n_routers = 9
+    #n_workers = 27
 
-    iteration = 0
-    def generator():
-        nonlocal iteration
-        while iteration < n:
-            yield UserTask(program, iteration)
-            iteration += 1
-    return generator
+    serv_coord = NetworkHost("73.0.0.1")
+    serv_root = serv_coord
+
+    coord = Coordinator(serv_coord, serv_root.ip, "coord")
+    root = Router(serv_root, serv_coord.ip, True, max_children_root,
+            "root", sharding)
+
+    tasks = []
+    task_ids = []
+
+    for i in range(n_routers):
+        server = NetworkHost("80.0")
+        router = Router(server, serv_coord.ip, False, max_children,
+                "r_" + str(i), sharding)
+    for i in range(n_workers):
+        server = NetworkHost("90.0")
+        worker = Worker(server, serv_coord.ip, "w_" + str(i))
+
+    for task in workload:
+        tasks.append(task)
+        coord.enqueueUserTask(task)
+#        #sleep(0.1)
+
+    coord.joinUserTasks()
+
+    ip_map, packets, failures = getNetworkDebugInfo()
+    #print("======== Debug Info ========")
+    #pprint(ip_map)
+    #pprint(packets)
+    #pprint(failures)
+
+    if args.show_tree:
+        print("======== Mcast Tree ========")
+        print(coord.root.prettyString())
 
 
-def fruitsOfMyLabor(n):
-    """ Generates a new program (i.e. new key distribution) for each task. """
-    fruits = ["apple", "orange", "pear", "peach", "mango", "rhubarb", "kiwi"]
-    fruits = [(fruit,) for fruit in fruits]
+    if args.show_tasks:
+        print("======= Task Results =======")
+        for task in tasks:
+            print(task)
 
-    iteration = 0
-    def generator():
-        nonlocal iteration
-        while iteration < n:
-            yield UserTask(EnclaveProgram(fruits, 0.6, 10), iteration)
-            iteration += 1
-    return generator
+    if args.metrics:
+        for b in args.metrics:
+            benchmark_stats[b](serv_coord.ip, serv_root.ip, ip_map, packets, failures)
 
 
-##### Stats #####
+def bench_nPackets(coord_ip, root_ip, ip_map, packet_list, failure_info):
+    br = lambda s: colored(str(s), 'green')
+    res = lambda s: colored(str(s), 'blue')
 
+    print(f"{br('[')}Total packets sent: {res(len(packet_list))}{br(']')}")
+
+
+def bench_nRootPackets(coord_ip, root_ip, ip_map, packet_list, failure_info):
+    br = lambda s: colored(str(s), 'green')
+    res = lambda s: colored(str(s), 'blue')
+
+    ls = [x for x in packet_list if x.src is root_ip or x.dst is root_ip]
+    print(f"{br('[')}Total packets handled by root router: {res(len(ls))}{br(']')}")
+
+
+benchmark_stats = {
+          'n_packets': bench_nPackets
+        , 'n_packets_root': bench_nRootPackets
+        }
 
 workloads = {
           'fruits_of_my_labor': fruitsOfMyLabor(128)
         , 'posterboard': posterboard(8)
         }
 
-run_targets = {
-          'bintree_5': runBintree5
-        , 'trintree_4': runTrintree4
-        , 'very_scalable': veryScalable
-        }
-
-
-parser = argparse.ArgumentParser(description=
-        'Benchmark multicast implementations')
-
-parser.add_argument('-r', '--routers', metavar='N_ROUTERS', default=0,
-        dest='n_routers', type=int, action='store')
-
-parser.add_argument('-e', '--enclaves', metavar='N_WORKERS', default=1,
-        dest='n_workers', type=int, action='store')
-
-parser.add_argument('-b', '--branch', metavar='BRANCH_FACTOR', default=1024,
-        dest='max_children', type=int, action='store')
-
-parser.add_argument('--root_branch', metavar='ROOT_BRANCH_FACTOR',
-        dest='max_children_root', type=int, action='store')
-
-parser.add_argument('-m', '--metric', metavar='METRIC',
-        dest='metrics', action='append')
-
-parser.add_argument('-w', '--workload',
-        default='fruits_of_my_labor', metavar='WORKLOAD',
-        dest='workload', action='store')
-
-parser.add_argument('--disable_sharding',
-        dest='sharding', action='store_false')
-
-parser.add_argument('--show_tree', action='store_true')
-parser.add_argument('--show_tasks', action='store_true')
-
 args = parser.parse_args()
-
-setBenchOpts(args, args.metrics)
-
 bench(workloads[args.workload](), args.n_routers, args.n_workers, args.max_children,
         args.max_children_root if args.max_children_root else args.max_children,
         args.sharding)
-
-#run_targets[args.run_target](lambda: None, workloads[args.workload]())

@@ -7,31 +7,6 @@ from enclave import EnclaveProgram, enclaveExecute
 from multicast_core import *
 
 
-class UserTask:
-    def __init__(self, program: EnclaveProgram, task_id: int):
-        self.id = task_id
-
-        self.program = program
-        self.result = None
-        self.has_result = False # Non-pythonic I know
-
-
-    def finish(self, result: int):
-        self.has_result = True
-        self.result = result
-
-
-    def __repr__(self):
-        return self.__str__()
-
-
-    def __str__(self):
-        if self.has_result:
-            return f"<UserTask ▣ #{self.id}: {self.result}>"
-        else:
-            return f"<UserTask □ #{self.id}: {self.program}>"
-
-
 class Tree(Node):
     def __init__(self, ip: IpAddr, is_router: bool, max_children: int = 0):
         self.children = []
