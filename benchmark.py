@@ -9,7 +9,6 @@ from multicast_coordinator import *
 from multicast_router import *
 from multicast_worker import *
 
-from benchmark_scenarios import *
 from workloads import *
 from user_args import *
 
@@ -52,42 +51,53 @@ def bench(workload, n_routers, n_workers,
     ip_map, packets, failures = getNetworkDebugInfo()
     #print("======== Debug Info ========")
     #pprint(ip_map)
-    #pprint(packets)
     #pprint(failures)
-
-    if args.show_tree:
-        print("======== Mcast Tree ========")
-        print(coord.root.prettyString())
-
-
-    if args.show_tasks:
-        print("======= Task Results =======")
-        for task in tasks:
-            print(task)
 
     if args.metrics:
         for b in args.metrics:
-            benchmark_stats[b](serv_coord.ip, serv_root.ip, ip_map, packets, failures)
+            benchmark_stats[b](coord, root, tasks, ip_map, packets, failures)
 
 
-def bench_nPackets(coord_ip, root_ip, ip_map, packet_list, failure_info):
+def bench_nPackets(coord, root, tasks, ip_map, packet_list, failure_info):
     br = lambda s: colored(str(s), 'green')
     res = lambda s: colored(str(s), 'blue')
 
     print(f"{br('[')}Total packets sent: {res(len(packet_list))}{br(']')}")
 
 
-def bench_nRootPackets(coord_ip, root_ip, ip_map, packet_list, failure_info):
+def bench_nRootPackets(coord, root, tasks, ip_map, packet_list, failure_info):
     br = lambda s: colored(str(s), 'green')
     res = lambda s: colored(str(s), 'blue')
+
+    root_ip = root.host.ip
 
     ls = [x for x in packet_list if x.src is root_ip or x.dst is root_ip]
     print(f"{br('[')}Total packets handled by root router: {res(len(ls))}{br(']')}")
 
 
+def bench_showTree(coord, root, tasks, ip_map, packet_list, failure_info):
+    print("======== Mcast Tree ========")
+    print(coord.root.prettyString())
+
+
+def bench_dumpTasks(coord, root, tasks, ip_map, packet_list, failure_info):
+    print("======= Task Results =======")
+    pprint(tasks)
+    #for task in tasks:
+    #    print(task)
+
+
+def bench_dumpPackets(coord, root, tasks, ip_map, packet_list, failure_info):
+    print("======= Sent Packets =======")
+    pprint(packet_list)
+
+
 benchmark_stats = {
           'n_packets': bench_nPackets
         , 'n_packets_root': bench_nRootPackets
+        , 'print_tree': bench_showTree
+        , 'dump_tasks': bench_dumpTasks
+        , 'dump_packets': bench_dumpPackets
         }
 
 workloads = {

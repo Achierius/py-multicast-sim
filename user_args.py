@@ -13,13 +13,15 @@ parser.add_argument('-b', '--branch', metavar='BRANCH_FACTOR', default=1024,
         dest='max_children', type=int, action='store')
 parser.add_argument('--root_branch', metavar='ROOT_BRANCH_FACTOR',
         dest='max_children_root', type=int, action='store')
-parser.add_argument('-m', '--metric', metavar='METRIC',
-        dest='metrics', action='append')
 parser.add_argument('-w', '--workload',
         default='fruits_of_my_labor', metavar='WORKLOAD',
         dest='workload', action='store')
+
 parser.add_argument('--disable_sharding',
         dest='sharding', action='store_false')
 
-parser.add_argument('--show_tree', action='store_true')
-parser.add_argument('--show_tasks', action='store_true')
+metrics_help = """Metrics:"""\
+        """'n_packets', 'n_packets_root', 'print_tree',"""\
+        """'dump_tasks, dump_packets"""
+parser.add_argument('-m', '--metric', metavar='METRIC',
+        dest='metrics', action='append', help=metrics_help)
