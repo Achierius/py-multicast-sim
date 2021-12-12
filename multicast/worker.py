@@ -1,9 +1,9 @@
-from network import Packet, NetworkHost, simpleSockListener, IpAddr, loopback_ip
-from enclave import EnclaveProgram, enclaveExecute
 from queue import Queue, SimpleQueue
 from time import sleep
 from threading import Thread
-from multicast_core import *
+from simulators.network import Packet, NetworkHost, simpleSockListener, IpAddr, loopback_ip
+from simulators.enclave import EnclaveProgram, enclaveExecute
+from multicast.core import *
 
 
 class Worker(Node):

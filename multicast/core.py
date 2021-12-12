@@ -1,8 +1,8 @@
-from network import Packet, NetworkHost, simpleSockListener, IpAddr, loopback_ip
-from enclave import EnclaveProgram, enclaveExecute
 from queue import Queue, SimpleQueue
 from time import sleep
 from threading import Thread
+from simulators.network import Packet, NetworkHost, simpleSockListener, IpAddr, loopback_ip
+from simulators.enclave import EnclaveProgram, enclaveExecute
 
 ROUTER_SEND_CHILD_BASE_PORT = 5555
 ROUTER_SEND_JOIN_PORT = 6666

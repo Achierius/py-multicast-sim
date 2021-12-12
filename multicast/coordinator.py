@@ -1,10 +1,10 @@
-from network import Packet, NetworkHost, simpleSockListener, IpAddr, loopback_ip
 from queue import Queue, SimpleQueue
 from time import sleep
 from termcolor import colored
 from threading import Thread
-from enclave import EnclaveProgram, enclaveExecute
-from multicast_core import *
+from simulators.enclave import EnclaveProgram, enclaveExecute
+from simulators.network import Packet, NetworkHost, simpleSockListener, IpAddr, loopback_ip
+from multicast.core import *
 
 
 class Tree(Node):

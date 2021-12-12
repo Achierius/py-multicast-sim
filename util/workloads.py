@@ -1,5 +1,5 @@
-from multicast_core import UserTask
-from enclave import *
+from multicast.core import UserTask
+from simulators.enclave import *
 
 ##### Workloads #####
 

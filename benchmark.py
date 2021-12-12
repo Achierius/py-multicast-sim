@@ -3,14 +3,14 @@ from time import sleep
 from termcolor import colored
 from numpy import repeat
 
-from network import *
-from multicast_core import *
-from multicast_coordinator import *
-from multicast_router import *
-from multicast_worker import *
+from multicast.core import *
+from multicast.coordinator import *
+from multicast.router import *
+from multicast.worker import *
 
-from workloads import *
-from user_args import *
+from simulators.network import *
+from util.workloads import *
+from util.user_args import *
 
 
 def bench(workload, n_routers, n_workers,

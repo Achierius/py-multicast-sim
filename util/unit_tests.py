@@ -2,12 +2,12 @@ import unittest
 from pprint import pprint
 from time import sleep
 
-from network import *
-from multicast_core import *
-from multicast_coordinator import *
-from multicast_router import *
-from multicast_worker import *
-from enclave import *
+from multicast.core import *
+from multicast.coordinator import *
+from multicast.router import *
+from multicast.worker import *
+from simulators.network import *
+from simulators.enclave import *
 
 
 class TestNetworkSimulator(unittest.TestCase):
