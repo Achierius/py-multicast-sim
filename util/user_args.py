@@ -2,7 +2,10 @@ import argparse
 
 
 def parseUserArgs():
-    return parser.parse_args()
+    rv = parser.parse_args()
+    if not rv.max_children_root:
+        rv.max_children_root = rv.max_children
+    return rv
 
 
 parser = argparse.ArgumentParser(
@@ -18,7 +21,6 @@ parser.add_argument('--root_branch', metavar='ROOT_BRANCH_FACTOR',
 parser.add_argument('-w', '--workload',
                     default='fruits_of_my_labor', metavar='WORKLOAD',
                     dest='workload', action='store')
-
 parser.add_argument('--disable_sharding',
                     dest='sharding', action='store_false')
 

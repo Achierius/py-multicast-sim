@@ -13,9 +13,18 @@ from util.workloads import *
 from util.user_args import *
 
 
-def bench(workload, n_routers, n_workers,
+def bench(print_to_console, workload, n_routers, n_workers,
           max_children, max_children_root,
           sharding):
+    assert isinstance(n_routers, int),\
+        f"n_routers must be an integer, but is {n_routers}"
+    assert isinstance(n_workers, int),\
+        f"n_workers must be an integer, but is {n_workers}"
+    assert isinstance(max_children, int),\
+        f"max_children must be an integer, but is {max_children}"
+    assert isinstance(max_children_root, int),\
+        f"max_children_root must be an integer, but is {max_children_root}"
+
     netReset()
 
     #max_children = 4
@@ -44,53 +53,105 @@ def bench(workload, n_routers, n_workers,
     for task in workload:
         tasks.append(task)
         coord.enqueueUserTask(task)
-#        #sleep(0.1)
+        sleep(0.001)
 
-    coord.joinUserTasks()
+    coord.joinUserTasks() # Wait for enclaves to finish execution
 
     ip_map, packets, failures = getNetworkDebugInfo()
-    #print("======== Debug Info ========")
-    # pprint(ip_map)
-    # pprint(failures)
+    metrics = []
+    if bench_metrics:
+        for b in bench_metrics:
+            metrics.append(
+                benchmark_stats[b](
+                    print_to_console,
+                    coord,
+                    root,
+                    tasks,
+                    ip_map,
+                    packets,
+                    failures))
 
-    if args.metrics:
-        for b in args.metrics:
-            benchmark_stats[b](coord, root, tasks, ip_map, packets, failures)
+    return metrics
 
 
-def bench_nPackets(coord, root, tasks, ip_map, packet_list, failure_info):
+def bench_nPackets(
+        console,
+        coord,
+        root,
+        tasks,
+        ip_map,
+        packet_list,
+        failure_info):
     def br(s): return colored(str(s), 'green')
     def res(s): return colored(str(s), 'blue')
 
-    print(f"{br('[')}Total packets sent: {res(len(packet_list))}{br(']')}")
+    if console:
+        print(f"{br('[')}Total packets sent: {res(len(packet_list))}{br(']')}")
+    return len(packet_list)
 
 
-def bench_nRootPackets(coord, root, tasks, ip_map, packet_list, failure_info):
+def bench_nRootPackets(
+        console,
+        coord,
+        root,
+        tasks,
+        ip_map,
+        packet_list,
+        failure_info):
     def br(s): return colored(str(s), 'green')
     def res(s): return colored(str(s), 'blue')
 
     root_ip = root.host.ip
-
     ls = [x for x in packet_list if x.src is root_ip or x.dst is root_ip]
-    print(
-        f"{br('[')}Total packets handled by root router: {res(len(ls))}{br(']')}")
+    if console:
+        print(
+            f"{br('[')}Total packets handled by root router: {res(len(ls))}{br(']')}")
+    return len(ls)
 
 
-def bench_showTree(coord, root, tasks, ip_map, packet_list, failure_info):
-    print("======== Mcast Tree ========")
-    print(coord.root.prettyString())
+def bench_showTree(
+        console,
+        coord,
+        root,
+        tasks,
+        ip_map,
+        packet_list,
+        failure_info):
+    tree = coord.root.prettyString()
+    if console:
+        print("======== Mcast Tree ========")
+        print(tree)
+    return tree
 
 
-def bench_dumpTasks(coord, root, tasks, ip_map, packet_list, failure_info):
-    print("======= Task Results =======")
-    pprint(tasks)
+def bench_dumpTasks(
+        console,
+        coord,
+        root,
+        tasks,
+        ip_map,
+        packet_list,
+        failure_info):
+    if console:
+        print("======= Task Results =======")
+        pprint(tasks)
+    return tasks
     # for task in tasks:
     #    print(task)
 
 
-def bench_dumpPackets(coord, root, tasks, ip_map, packet_list, failure_info):
-    print("======= Sent Packets =======")
-    pprint(packet_list)
+def bench_dumpPackets(
+        console,
+        coord,
+        root,
+        tasks,
+        ip_map,
+        packet_list,
+        failure_info):
+    if console:
+        print("======= Sent Packets =======")
+        pprint(packet_list)
+    return packet_list
 
 
 benchmark_stats = {
@@ -104,10 +165,15 @@ workloads = {
     'fruits_of_my_labor': fruitsOfMyLabor(128), 'posterboard': posterboard(8)
 }
 
-args = parser.parse_args()
-bench(workloads[args.workload](),
-      args.n_routers,
-      args.n_workers,
-      args.max_children,
-      args.max_children_root if args.max_children_root else args.max_children,
-      args.sharding)
+bench_metrics = []
+
+if __name__ == "__main__":
+    args = parseUserArgs()
+    bench_metrics = args.metrics
+    bench(True,  # Print to console
+          workloads[args.workload](),
+          args.n_routers,
+          args.n_workers,
+          args.max_children,
+          args.max_children_root,
+          args.sharding)

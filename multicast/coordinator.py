@@ -39,6 +39,12 @@ class Tree(Node):
     def numChildren(self) -> int:
         return len(self.children)
 
+    def numDescendants(self) -> int:
+        if not self.children:
+            return 0
+        return self.numChildren()\
+             + sum([c.numDescendants() for c in self.children])
+
     def addChild(self, ip: IpAddr):
         assert(self.hasRoom())
         self.children.append(ip)
@@ -78,7 +84,7 @@ class Coordinator(Node):
                 if tree.hasRoom():
                     return tree
                 sorted_children = sorted(tree.children,
-                                         key=lambda c: len(c.children))
+                                         key=lambda c: c.numDescendants())
                 for child in sorted_children:
                     candidate = findRoom(child)
                     if candidate:
