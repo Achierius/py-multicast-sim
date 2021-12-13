@@ -162,7 +162,10 @@ benchmark_stats = {
     'dump_packets': bench_dumpPackets}
 
 workloads = {
-    'fruits_of_my_labor': fruitsOfMyLabor(128), 'posterboard': posterboard(8)
+    'fruits_of_my_labor': fruitsOfMyLabor, 'posterboard': posterboard,
+    'monic': monic, '2x10': lambda n, t: working_sets(n, t, 2, 10),
+    '4x5': lambda n, t: working_sets(n, t, 4, 5),
+    '1x20': lambda n, t: working_sets(n, t, 1, 20)
 }
 
 bench_metrics = []
@@ -171,7 +174,7 @@ if __name__ == "__main__":
     args = parseUserArgs()
     bench_metrics = args.metrics
     bench(True,  # Print to console
-          workloads[args.workload](),
+          workloads[args.workload](args.n_workers * 2, 5)(),
           args.n_routers,
           args.n_workers,
           args.max_children,
