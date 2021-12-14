@@ -19,7 +19,7 @@ class Tree(Node):
         car = colored(
             ' 𝕽 ',
             'red') if self.is_router else colored(
-            ' 労',
+            ' 労' + str(self.ip),
             'yellow')
         cdr = ""
         for child in self.children:
@@ -49,6 +49,8 @@ class Tree(Node):
         assert(self.hasRoom())
         self.children.append(ip)
 
+    def forceAddChild(self, ip: IpAddr):
+        self.children.append(ip)
 
 class Coordinator(Node):
 
@@ -92,8 +94,20 @@ class Coordinator(Node):
                 return None
 
             new_home = findRoom(self.root)
+
+            # Temporary behavior: Just assign to the root instead
+            # TODO remove this at some point
+            force = False
+            if not new_home:
+                force = True
+                new_home = self.root
+            # TODO this is an awful hack
+
             if new_home:
-                new_home.addChild(new_node)
+                if force:
+                    new_home.forceAddChild(new_node)
+                else:
+                    new_home.addChild(new_node)
 
                 msg_to_child = {
                     'type': "AssignParent", 'ip': new_home.ip
@@ -112,6 +126,7 @@ class Coordinator(Node):
                     new_home.ip,
                     ROUTER_CONTROL_PORT)
             else:
+                assert false
                 # TODO reply with NACK
                 return
         elif (msg['type'] == 'RootJoin'):

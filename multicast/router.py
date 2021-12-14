@@ -4,6 +4,8 @@ from threading import Thread
 from simulators.network import Packet, NetworkHost, simpleSockListener, IpAddr, loopback_ip
 from simulators.enclave import EnclaveProgram, enclaveExecute
 from multicast.core import *
+from threading import Lock
+from util.rw_lock import ReadWriteLock
 
 
 class Router(Node):
@@ -24,6 +26,7 @@ class Router(Node):
         self.child_workers = []
         self.child_routers = []
         self.enable_sharding = enable_sharding
+        self.lock = ReadWriteLock()
 
         self.child_task_counts = {}  # Lets us load-balance new tasks
         self.child_task_keys = {}  # Idealized (downwards) key-based sharding
@@ -58,9 +61,11 @@ class Router(Node):
             if msg['node_type'] == 'Worker':
                 self.child_workers.append(ip)
                 self.child_task_counts[ip] = 0
+                self.child_task_keys[ip] = {}
             elif msg['node_type'] == 'Router':
                 self.child_routers.append(ip)
                 self.child_task_counts[ip] = 0
+                self.child_task_keys[ip] = {}
             else:
                 assert not msg, f"Bad node_type in msg: {msg}"
         else:
@@ -69,7 +74,6 @@ class Router(Node):
     def handleMulticastMsg(self, p: Packet):
         msg = p.payload
         if (msg['type'] == 'KeyUpdate'):
-            # TODO multicast propogation
             def propogateMulticast(ip, is_router):
                 assert ip, f"Null ip cannot be propogated: orig. packet {p}"
                 if ip is p.src:
@@ -102,7 +106,6 @@ class Router(Node):
                     propogateMulticast(child, False)
                 for child in self.child_routers:
                     propogateMulticast(child, True)
-            return
         else:
             assert not msg, f"bad msg contents: {msg}"
 
@@ -120,8 +123,10 @@ class Router(Node):
             self.child_task_counts,
             key=self.child_task_counts.get)
         self.child_task_counts[lucky_child] += 1  # Track tasks per child
-        if lucky_child not in self.child_task_keys:  # Track keys in use by child
-            self.child_task_keys[lucky_child] = {}
+        #self.lock.acquire_read()
+        #    self.lock.release_read()
+        #    self.lock.acquire_write()
+        #    self.lock.release_write()
         for k in msg['program'].keys:
             if k in self.child_task_keys[lucky_child]:
                 self.child_task_keys[lucky_child][k] += 1
